@@ -18,7 +18,9 @@ app = Flask(__name__)
 # Database Setup
 #################################################
 
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db/bellybutton.sqlite"
+app.config["SQLALCHEMY_DATABASE_URI"] =  "sqlite:///db/bellybutton.sqlite"
+
+# Create connection to DB
 db = SQLAlchemy(app)
 
 # reflect an existing database into a new model
@@ -29,6 +31,7 @@ Base.prepare(db.engine, reflect=True)
 # Save references to each table
 Samples_Metadata = Base.classes.sample_metadata
 Samples = Base.classes.samples
+
 
 
 @app.route("/")
@@ -89,6 +92,15 @@ def sample_metadata(sample):
 
     print(sample_metadata)
     return jsonify(sample_metadata)
+
+
+@app.route("/wfreq/<sample>")
+def sample_wfreq(sample):
+    """Return the Washing Frequency for a given sample."""
+    results = db.session.query(Samples_Metadata.WFREQ).filter(Samples_Metadata.sample == sample).all()
+
+    print(results[0][0])
+    return jsonify(results[0][0])
 
 
 @app.route("/samples/<sample>")
