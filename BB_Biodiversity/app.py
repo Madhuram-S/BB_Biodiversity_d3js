@@ -18,20 +18,16 @@ app = Flask(__name__)
 # Database Setup
 #################################################
 
-app.config["SQLALCHEMY_DATABASE_URI"] =  "sqlite:///db/bellybutton.sqlite"
+app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db/bellybutton.sqlite"
+#  app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', '') or "sqlite:///db/bellybutton.sqlite"
+# app.config["SQLALCHEMY_DATABASE_URI"] = "mysql://py_user:Ashubrindha12$$@localhost/BB_bio"
+# app.config["SQLALCHEMY_BINDS"] = {'sql_lite' : "sqlite:///db/bellybutton.sqlite"}
 
 # Create connection to DB
 db = SQLAlchemy(app)
 
-# reflect an existing database into a new model
-Base = automap_base()
-# reflect the tables
-Base.prepare(db.engine, reflect=True)
-
-# Save references to each table
-Samples_Metadata = Base.classes.sample_metadata
-Samples = Base.classes.samples
-
+# import the required DB classes (tables) from file models.py
+from .models import Samples_Metadata, Samples
 
 
 @app.route("/")
