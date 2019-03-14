@@ -20,15 +20,12 @@ app = Flask(__name__)
 
 app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///db/bellybutton.sqlite"
 #  app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get('DATABASE_URL', '') or "sqlite:///db/bellybutton.sqlite"
-# app.config["SQLALCHEMY_DATABASE_URI"] = "mysql://py_user:Ashubrindha12$$@localhost/BB_bio"
-# app.config["SQLALCHEMY_BINDS"] = {'sql_lite' : "sqlite:///db/bellybutton.sqlite"}
 
 # Create connection to DB
 db = SQLAlchemy(app)
 
 # import the required DB classes (tables) from file models.py
 from .models import Samples_Metadata, Samples
-
 
 @app.route("/")
 def index():
@@ -86,7 +83,7 @@ def sample_metadata(sample):
         sample_metadata["BBTYPE"] = result[5]
         sample_metadata["WFREQ"] = result[6]
 
-    print(sample_metadata)
+    # print(sample_metadata)
     return jsonify(sample_metadata)
 
 
@@ -95,7 +92,7 @@ def sample_wfreq(sample):
     """Return the Washing Frequency for a given sample."""
     results = db.session.query(Samples_Metadata.WFREQ).filter(Samples_Metadata.sample == sample).all()
 
-    print(results[0][0])
+    # print(results[0][0])
     return jsonify(results[0][0])
 
 

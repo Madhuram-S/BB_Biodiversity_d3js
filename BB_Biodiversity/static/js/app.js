@@ -1,9 +1,11 @@
 // declare global variables
 var metaDataUrl = "/metadata/"
 var samplesUrl = "/samples/"
+
 // get the element for displaying metadata information using d3
 var metadata_panel = d3.select("#sample-metadata");
 
+// wash frequency for building gauge
 var maxWashFreq = 9;
 var washFreq = 0;
 
@@ -11,7 +13,6 @@ var washFreq = 0;
 gaugeColors = ['#cc9900','#e6ac00','#ffbf00','#ffc61a','#ffcc33','#ffd24d','#ffdf80','#ffe699',
  '#fff2cc', '#ffffff']
 // pie Color Set
-
 pieColors = ['rgba(244, 185, 66,0.6)',
 'rgba(65, 217, 244,0.6)',
 'rgba(65, 244, 223,0.6)',
@@ -23,12 +24,14 @@ pieColors = ['rgba(244, 185, 66,0.6)',
 'rgba(186, 100, 29,0.6)',
 'rgba(186, 138, 27,0.6)'];
 
+// function to sort the samples arr in desc order
 function SortSample_desc(arr){
   return arr.sort(function(first, second) {
         return parseFloat(second.sample_values) - parseFloat(first.sample_values);
     });
 }
 
+// function to reshape array - not used
 function arrReShape(sample){
   newArr = [];
   d3.json(`/samples/${sample}`).then(function(data){
@@ -54,11 +57,12 @@ function arrReShape(sample){
 }
 
 function buildPieChart(chartData){
+  // create the data trace
   var pie_data = [{      
     values : chartData.map(d => d.sample_values),
     labels : chartData.map(d => d.otu_id),
-    text : chartData.map(d => d.otu_label),
-    hoverinfo : 'text+label+percent',
+    hovertext : chartData.map(d => (d.otu_label).replace(/;/g,"<br>")),
+    hoverinfo : 'label+percent+text',
     textinfo:'percent',
     type : "pie",
     marker : {colors: pieColors,
@@ -71,30 +75,38 @@ function buildPieChart(chartData){
       size: 10
     }
   }];
+  // provide the layout parameters
   var layout = {
     height: 350,
     width: 400,
-    title : "Bio-Diversity Top 10",
-    
+    title : "Bio-Diversity Top 10",    
     margin: {
       l: 20,
       r: 20,
       b: 70,
-      t: 30,
+      t: 60,
       pad: 0
     },
   };
+  // plot the pie chart in the given div element
   Plotly.newPlot("pie", pie_data, layout);
 }
 
 function buildBubbleChart(chartData){
-  
+  const reducer = (accumulator, currentValue)=> accumulator + currentValue;
+  // set bubble size - not used currently
+  var bSize_sum = chartData.map(d => d.sample_values).reduce(reducer); 
+  var bSize = chartData.map(d => {return (d.sample_values / bSize_sum)*600})
+
+  // construct the buuble trace
   var bubble_data = {
     x : chartData.map(d => d.otu_id),
     y : chartData.map(d => d.sample_values),
     type : "scatter",
     mode : "markers",
     marker : {size : chartData.map(d => d.sample_values),
+              sizemode:"diameter",
+              sizeref : 2 * Math.max(chartData.map(d => d.sample_values)) / (2000 ** 2),
               color: chartData.map(d => d.otu_id),
               colorscale: 'Rainbow',
               cmin: 0,
@@ -103,7 +115,7 @@ function buildBubbleChart(chartData){
     label: chartData.map(d => d.otu_label),
     text : chartData.map(d => d.otu_label)    
   };
-
+  // set the layout parameters
   var layout = {
     height : 500, 
     width : 1200,
@@ -119,7 +131,7 @@ function buildBubbleChart(chartData){
     }
     
   };
-
+// plot the bubble plot
   Plotly.newPlot("bubble", [bubble_data], layout);
 }
 
@@ -137,12 +149,11 @@ function buildGaugeChart(washFreq){
     pie_values.push(50),
     pie_text.push("")
 
-    console.log(pie_text);
-    
     // Calculate the pointer position based on wash requency
     var needlePos_deg = 180;
     if(washFreq == null || washFreq === false || washFreq === 0 || washFreq === ""){
       needlePos_deg = 180;
+      washFreq = 0;
     }
     else{      
       needlePos_deg = ((maxWashFreq-washFreq)/maxWashFreq).toFixed(2) * 172;      
@@ -152,13 +163,14 @@ function buildGaugeChart(washFreq){
     var x = radius * Math.cos(radians);
     var y = radius * Math.sin(radians);
 
-    // Path: to create a better triangle
+    // Path: to create a pointer triangle
     var mainPath = 'M -.0 -0.025 L .0 0.025 L ',
         pathX = String(x),
         space = ' ',
         pathY = String(y),
         pathEnd = ' Z';
     var path = mainPath.concat(pathX,space,pathY,pathEnd);
+    // create the trace for gauge pointer
     var pntr_trace = { type: 'scatter',
     x: [0], y:[0],
       marker: {size: 28, color:'850000'},
@@ -166,7 +178,7 @@ function buildGaugeChart(washFreq){
       name: 'Wash Frequency',
       text: washFreq,
       hoverinfo: 'text+name'};
-    
+    // provide the gauage trace (scale from 0 to 9)
     var gauge_trace = { values: pie_values,
       rotation: 90,
       text: pie_text,
@@ -179,9 +191,9 @@ function buildGaugeChart(washFreq){
       type: 'pie',
       showlegend: false
     };
-
+    // add trace to data variable
     var data = [pntr_trace,gauge_trace];
-
+    // add layout and style
     var layout = {
       shapes:[{
           type: 'path',
@@ -198,7 +210,7 @@ function buildGaugeChart(washFreq){
           t: 90,
           pad: 4
         },
-      title: 'Belly Button Washing Frequency <br> (scrubs per week)',
+      title: `Belly Button Washing Frequency <br> Sample Wash Frequency : ${washFreq} scrubs per week`,
       height: 400,
       width: 400,
       xaxis: {zeroline:false, showticklabels:false,
@@ -210,24 +222,15 @@ function buildGaugeChart(washFreq){
 Plotly.newPlot('gauge', data, layout);
 }
 
+// function to read the jspn from samples/sample uri and plot the respective charts (pie and bubble)
 function buildCharts(sample) {
-
-  // Use `d3.json` to fetch the sample data for the plots
-
-    //Build a Bubble Chart using the sample data
-
-    // Build a Pie Chart only for Top 10 sample_values
-    
-    // Build Gauge chart for displaying washing Frequency
-
+// Use `d3.json` to fetch the sample data for the plots
+//Build a Bubble Chart using the sample data and a Pie Chart only for Top 10 sample_values
   d3.json(`/samples/${sample}`).then(function(data){
     console.log(data);
     pltData = SortSample_desc(data);
-    
-    // Build a Pie Chart
-    //Only top 10 values are considered for pie chart
-    buildPieChart(pltData.slice(0,10));    
-    buildBubbleChart(pltData);
+    buildPieChart(pltData.slice(0,10));    // plot a pie with top 10 values
+    buildBubbleChart(pltData); // plot a bubble chart with all values
     
   });
 }
@@ -247,26 +250,21 @@ function buildMetadata(sample) {
           metadata_panel.append("span")
                       .attr("style","font-size: 11px;")
                       .text(`${key} : ${value} | `);
-          // metadata_panel.append("br");
-          // key === "WFREQ"? washFreq = value: washFreq = washFreq;
-        
-      });
+          });
     });
   }
 
 function getWFREQ(sample){
+  // get the wash frequency for a given sample
   d3.json(`/wfreq/${sample}`).then(function(data){
     // Build the Gauge Chart showing number of scrubs per day            
     buildGaugeChart(data);
-
   });
 }
-
 
 function init() {
   // Grab a reference to the dropdown select element
   var selector = d3.select("#selDataset");
-
   // Use the list of sample names to populate the select options
   d3.json("/names").then((sampleNames) => {
     sampleNames.forEach((sample) => {
@@ -278,10 +276,8 @@ function init() {
 
     // Use the first sample from the list to build the initial plots
     const firstSample = sampleNames[0];
-    
     // arrReShape(firstSample);
     // mapSort(firstSample);
-    
     buildCharts(firstSample);
     buildMetadata(firstSample);    
     getWFREQ(firstSample)
@@ -293,8 +289,6 @@ function optionChanged(newSample) {
   buildCharts(newSample);
   buildMetadata(newSample);
   getWFREQ(newSample);
-  
-  
 }
 
 // Initialize the dashboard
